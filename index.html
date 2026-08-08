@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Estoque</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --info: #3498db;
+            --bg: #f4f6f8;
+            --card: #ffffff;
+            --text: #333333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* Dashboard */
+        .dashboard {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .dash-card {
+            flex: 1;
+            background: var(--card);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .dash-card.danger {
+            border-left: 4px solid var(--danger);
+        }
+        .dash-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        .dash-card.danger .dash-value {
+            color: var(--danger);
+        }
+        .dash-label {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        /* Pesquisa */
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        /* Lista de Produtos */
+        #product-list {
+            padding-bottom: 80px;
+        }
+        .product-card {
+            background: var(--card);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .product-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .product-price {
+            color: var(--success);
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .stock-control {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .btn-circle {
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn-minus { background: var(--danger); }
+        .btn-plus { background: var(--info); }
+        .actions {
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+        }
+        .action-link {
+            color: #7f8c8d;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* Botão Flutuante */
+        .fab {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 30px;
+            font-size: 30px;
+            border: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .modal-title {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+        }
+        .btn-cancel { background: #95a5a6; }
+        .btn-save { background: var(--success); }
+    </style>
+</head>
+<body>
+
+    <h1>Meu Estoque</h1>
+
+    <div class="dashboard">
+        <div class="dash-card">
+            <div class="dash-value" id="total-produtos">0</div>
+            <div class="dash-label">Produtos</div>
+        </div>
+        <div class="dash-card danger">
+            <div class="dash-value" id="estoque-baixo">0</div>
+            <div class="dash-label">Estoque Baixo</div>
+        </div>
+    </div>
+
+    <input type="text" id="search" class="search-input" placeholder="Pesquisar produto..." onkeyup="renderProducts()">
+
+    <div id="product-list">
+        <!-- Os produtos aparecerão aqui -->
+    </div>
+
+    <button class="fab" onclick="openModal()">+</button>
+
+    <!-- Modal de Cadastro/Edição -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal-content">
+            <h2 class="modal-title" id="modal-title">Novo Produto</h2>
+            <input type="hidden" id="prod-id">
+            <input type="text" id="prod-name" class="form-input" placeholder="Nome do Produto">
+            <input type="number" id="prod-qtd" class="form-input" placeholder="Quantidade">
+            <input type="number" step="0.01" id="prod-price" class="form-input" placeholder="Preço (ex: 10.50)">
+            
+            <div class="modal-buttons">
+                <button class="btn btn-cancel" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-save" onclick="saveProduct()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. Bibliotecas do Firebase (Versão Compatível) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+    <!-- 2. Lógica do Aplicativo -->
+    <script>
+        // Configuração do seu Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDCu2TsepGbIm2HhDeAVdNHIdb7US8OVNA",
+            authDomain: "cantinho-rural.firebaseapp.com",
+            projectId: "cantinho-rural",
+            storageBucket: "cantinho-rural.firebasestorage.app",
+            messagingSenderId: "332136388258",
+            appId: "1:332136388258:web:e5c13d224e163b63a669fb"
+        };
+
+        // Inicializa o Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let products = [];
+
+        // Lê os dados do Firebase em tempo real
+        db.collection("produtos").onSnapshot((snapshot) => {
+            products = [];
+            snapshot.forEach((doc) => {
+                products.push({ id: doc.id, ...doc.data() });
+            });
+            renderProducts();
+        });
+
+        function renderProducts() {
+            const searchTerm = document.getElementById('search').value.toLowerCase();
+            const listContainer = document.getElementById('product-list');
+            listContainer.innerHTML = ''; 
+
+            let lowStockCount = 0;
+            const filteredProducts = products.filter(p => {
+                if (p.quantity <= 5) lowStockCount++;
+                return p.name.toLowerCase().includes(searchTerm);
+            });
+
+            document.getElementById('total-produtos').innerText = products.length;
+            document.getElementById('estoque-baixo').innerText = lowStockCount;
+
+            filteredProducts.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = `
+                    <div class="product-header">
+                        <div class="product-title">${item.name}</div>
+                        <div class="product-price">R$ ${parseFloat(item.price).toFixed(2)}</div>
+                    </div>
+                    <div class="stock-control">
+                        <div>Estoque: <b>${item.quantity}</b></div>
+                        <div>
+                            <button class="btn-circle btn-minus" onclick="updateStock('${item.id}', ${item.quantity}, -1)">-1</button>
+                            <button class="btn-circle btn-plus" onclick="updateStock('${item.id}', ${item.quantity}, 1)">+1</button>
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <a class="action-link" onclick='openModal(${JSON.stringify(item)})'>Editar</a>
+                        <a class="action-link" onclick="deleteProduct('${item.id}')">Excluir</a>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        async function saveProduct() {
+            const id = document.getElementById('prod-id').value;
+            const name = document.getElementById('prod-name').value;
+            const quantity = document.getElementById('prod-qtd').value;
+            const price = document.getElementById('prod-price').value;
+
+            if (!name || !quantity || !price) {
+                alert("Preencha todos os campos!");
+                return;
+            }
+
+            const data = {
+                name: name,
+                quantity: parseInt(quantity),
+                price: parseFloat(price.replace(',', '.'))
+            };
+
+            try {
+                if (id) {
+                    await db.collection("produtos").doc(id).update(data);
+                } else {
+                    await db.collection("produtos").add(data);
+                }
+                closeModal();
+            } catch (error) {
+                alert("Erro ao salvar: " + error.message);
+            }
+        }
+
+        async function deleteProduct(id) {
+            if(confirm("Tem certeza que deseja excluir este produto?")) {
+                try {
+                    await db.collection("produtos").doc(id).delete();
+                } catch(error) {
+                    alert("Erro ao excluir: " + error.message);
+                }
+            }
+        }
+
+        async function updateStock(id, currentQty, change) {
+            const newQty = currentQty + change;
+            if (newQty < 0) return; 
+            
+            try {
+                await db.collection("produtos").doc(id).update({ quantity: newQty });
+            } catch(error) {
+                alert("Erro ao atualizar o estoque: " + error.message);
+            }
+        }
+
+        function openModal(product = null) {
+            document.getElementById('modal').classList.add('active');
+            if (product) {
+                document.getElementById('modal-title').innerText = "Editar Produto";
+                document.getElementById('prod-id').value = product.id;
+                document.getElementById('prod-name').value = product.name;
+                document.getElementById('prod-qtd').value = product.quantity;
+                document.getElementById('prod-price').value = product.price;
+            } else {
+                document.getElementById('modal-title').innerText = "Novo Produto";
+                document.getElementById('prod-id').value = '';
+                document.getElementById('prod-name').value = '';
+                document.getElementById('prod-qtd').value = '';
+                document.getElementById('prod-price').value = '';
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+    </script>
+</body>
+</html>
