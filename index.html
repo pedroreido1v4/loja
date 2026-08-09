@@ -39,11 +39,13 @@
         /* Dashboard */
         .dashboard {
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 20px;
         }
         .dash-card {
             flex: 1;
+            min-width: 100px;
             background: var(--card);
             padding: 15px;
             border-radius: 10px;
@@ -53,17 +55,21 @@
         .dash-card.danger {
             border-left: 4px solid var(--danger);
         }
+        .dash-card.success {
+            border-left: 4px solid var(--success);
+        }
         .dash-value {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             color: var(--primary);
         }
-        .dash-card.danger .dash-value {
-            color: var(--danger);
-        }
+        .dash-card.danger .dash-value { color: var(--danger); }
+        .dash-card.success .dash-value { color: var(--success); }
+        
         .dash-label {
-            font-size: 14px;
+            font-size: 13px;
             color: #7f8c8d;
+            margin-top: 5px;
         }
 
         /* Pesquisa */
@@ -107,6 +113,7 @@
             margin-bottom: 15px;
             padding-bottom: 10px;
             border-bottom: 1px dashed #eee;
+            line-height: 1.6;
         }
         .stock-control {
             display: flex;
@@ -215,11 +222,15 @@
     <div class="dashboard">
         <div class="dash-card">
             <div class="dash-value" id="total-produtos">0</div>
-            <div class="dash-label">Produtos</div>
+            <div class="dash-label">Itens Diferentes</div>
         </div>
         <div class="dash-card danger">
             <div class="dash-value" id="estoque-baixo">0</div>
             <div class="dash-label">Estoque Baixo</div>
+        </div>
+        <div class="dash-card success">
+            <div class="dash-value" id="lucro-total">R$ 0,00</div>
+            <div class="dash-label">Lucro Total do Estoque</div>
         </div>
     </div>
 
@@ -239,7 +250,6 @@
             <input type="text" id="prod-name" class="form-input" placeholder="Nome do Produto">
             <input type="number" id="prod-qtd" class="form-input" placeholder="Quantidade">
             
-            <!-- Novos campos de Valores -->
             <input type="number" step="0.01" id="prod-cost" class="form-input" placeholder="Preço de Custo (ex: 5.00)">
             <input type="number" step="0.01" id="prod-price" class="form-input" placeholder="Preço de Venda (ex: 10.50)">
             
@@ -280,47 +290,67 @@
             renderProducts();
         });
 
+        function formatCurrency(value) {
+            return value.toFixed(2).replace('.', ',');
+        }
+
         function renderProducts() {
             const searchTerm = document.getElementById('search').value.toLowerCase();
             const listContainer = document.getElementById('product-list');
             listContainer.innerHTML = ''; 
 
             let lowStockCount = 0;
-            const filteredProducts = products.filter(p => {
-                if (p.quantity <= 5) lowStockCount++;
-                return p.name.toLowerCase().includes(searchTerm);
+            let totalInventoryProfit = 0;
+
+            // Calcula os dados do Dashboard baseado em TODOS os produtos
+            products.forEach(p => {
+                const quantity = parseInt(p.quantity) || 0;
+                if (quantity <= 5) lowStockCount++;
+                
+                const cost = parseFloat(p.cost) || 0;
+                const price = parseFloat(p.price) || 0;
+                
+                // Soma o lucro total do estoque (lucro por unidade * quantidade)
+                totalInventoryProfit += (price - cost) * quantity;
             });
 
             document.getElementById('total-produtos').innerText = products.length;
             document.getElementById('estoque-baixo').innerText = lowStockCount;
+            document.getElementById('lucro-total').innerText = 'R$ ' + formatCurrency(totalInventoryProfit);
+
+            // Filtra os produtos para a pesquisa
+            const filteredProducts = products.filter(p => p.name.toLowerCase().includes(searchTerm));
 
             filteredProducts.forEach(item => {
-                // Cálculo do Lucro
                 const cost = parseFloat(item.cost) || 0;
                 const price = parseFloat(item.price) || 0;
-                const profit = price - cost;
+                const quantity = parseInt(item.quantity) || 0;
                 
-                // Define a cor do lucro (verde se maior que 0, vermelho se negativo)
-                const profitColor = profit >= 0 ? 'var(--success)' : 'var(--danger)';
+                const unitProfit = price - cost;
+                const totalItemProfit = unitProfit * quantity;
+                
+                const profitColor = unitProfit >= 0 ? 'var(--success)' : 'var(--danger)';
+                const totalProfitColor = totalItemProfit >= 0 ? 'var(--success)' : 'var(--danger)';
 
                 const card = document.createElement('div');
                 card.className = 'product-card';
                 card.innerHTML = `
                     <div class="product-header">
                         <div class="product-title">${item.name}</div>
-                        <div class="product-price">Venda: R$ ${price.toFixed(2)}</div>
+                        <div class="product-price">Venda: R$ ${formatCurrency(price)}</div>
                     </div>
                     
                     <div class="product-finance">
-                        Custo: R$ ${cost.toFixed(2)} | 
-                        Lucro p/ un: <b style="color: ${profitColor}">R$ ${profit.toFixed(2)}</b>
+                        Custo: R$ ${formatCurrency(cost)} | 
+                        Lucro p/ un: <b style="color: ${profitColor}">R$ ${formatCurrency(unitProfit)}</b><br>
+                        Lucro Total (Venda de todas as un.): <b style="color: ${totalProfitColor}">R$ ${formatCurrency(totalItemProfit)}</b>
                     </div>
 
                     <div class="stock-control">
-                        <div>Estoque: <b>${item.quantity}</b></div>
+                        <div>Estoque: <b>${quantity}</b></div>
                         <div>
-                            <button class="btn-circle btn-minus" onclick="updateStock('${item.id}', ${item.quantity}, -1)">-1</button>
-                            <button class="btn-circle btn-plus" onclick="updateStock('${item.id}', ${item.quantity}, 1)">+1</button>
+                            <button class="btn-circle btn-minus" onclick="updateStock('${item.id}', ${quantity}, -1)">-1</button>
+                            <button class="btn-circle btn-plus" onclick="updateStock('${item.id}', ${quantity}, 1)">+1</button>
                         </div>
                     </div>
                     
@@ -340,7 +370,6 @@
             const cost = document.getElementById('prod-cost').value;
             const price = document.getElementById('prod-price').value;
 
-            // Validação simples
             if (!name || !quantity || !cost || !price) {
                 alert("Preencha todos os campos!");
                 return;
