@@ -90,16 +90,23 @@
         .product-header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         .product-title {
             font-size: 18px;
             font-weight: bold;
         }
         .product-price {
-            color: var(--success);
+            color: var(--info);
             font-weight: bold;
             font-size: 16px;
+        }
+        .product-finance {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #eee;
         }
         .stock-control {
             display: flex;
@@ -231,7 +238,10 @@
             <input type="hidden" id="prod-id">
             <input type="text" id="prod-name" class="form-input" placeholder="Nome do Produto">
             <input type="number" id="prod-qtd" class="form-input" placeholder="Quantidade">
-            <input type="number" step="0.01" id="prod-price" class="form-input" placeholder="Preço (ex: 10.50)">
+            
+            <!-- Novos campos de Valores -->
+            <input type="number" step="0.01" id="prod-cost" class="form-input" placeholder="Preço de Custo (ex: 5.00)">
+            <input type="number" step="0.01" id="prod-price" class="form-input" placeholder="Preço de Venda (ex: 10.50)">
             
             <div class="modal-buttons">
                 <button class="btn btn-cancel" onclick="closeModal()">Cancelar</button>
@@ -240,11 +250,10 @@
         </div>
     </div>
 
-    <!-- 1. Bibliotecas do Firebase (Versão Compatível) -->
+    <!-- Bibliotecas do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 
-    <!-- 2. Lógica do Aplicativo -->
     <script>
         // Configuração do seu Firebase
         const firebaseConfig = {
@@ -286,13 +295,27 @@
             document.getElementById('estoque-baixo').innerText = lowStockCount;
 
             filteredProducts.forEach(item => {
+                // Cálculo do Lucro
+                const cost = parseFloat(item.cost) || 0;
+                const price = parseFloat(item.price) || 0;
+                const profit = price - cost;
+                
+                // Define a cor do lucro (verde se maior que 0, vermelho se negativo)
+                const profitColor = profit >= 0 ? 'var(--success)' : 'var(--danger)';
+
                 const card = document.createElement('div');
                 card.className = 'product-card';
                 card.innerHTML = `
                     <div class="product-header">
                         <div class="product-title">${item.name}</div>
-                        <div class="product-price">R$ ${parseFloat(item.price).toFixed(2)}</div>
+                        <div class="product-price">Venda: R$ ${price.toFixed(2)}</div>
                     </div>
+                    
+                    <div class="product-finance">
+                        Custo: R$ ${cost.toFixed(2)} | 
+                        Lucro p/ un: <b style="color: ${profitColor}">R$ ${profit.toFixed(2)}</b>
+                    </div>
+
                     <div class="stock-control">
                         <div>Estoque: <b>${item.quantity}</b></div>
                         <div>
@@ -300,6 +323,7 @@
                             <button class="btn-circle btn-plus" onclick="updateStock('${item.id}', ${item.quantity}, 1)">+1</button>
                         </div>
                     </div>
+                    
                     <div class="actions">
                         <a class="action-link" onclick='openModal(${JSON.stringify(item)})'>Editar</a>
                         <a class="action-link" onclick="deleteProduct('${item.id}')">Excluir</a>
@@ -313,9 +337,11 @@
             const id = document.getElementById('prod-id').value;
             const name = document.getElementById('prod-name').value;
             const quantity = document.getElementById('prod-qtd').value;
+            const cost = document.getElementById('prod-cost').value;
             const price = document.getElementById('prod-price').value;
 
-            if (!name || !quantity || !price) {
+            // Validação simples
+            if (!name || !quantity || !cost || !price) {
                 alert("Preencha todos os campos!");
                 return;
             }
@@ -323,6 +349,7 @@
             const data = {
                 name: name,
                 quantity: parseInt(quantity),
+                cost: parseFloat(cost.replace(',', '.')),
                 price: parseFloat(price.replace(',', '.'))
             };
 
@@ -366,12 +393,14 @@
                 document.getElementById('prod-id').value = product.id;
                 document.getElementById('prod-name').value = product.name;
                 document.getElementById('prod-qtd').value = product.quantity;
-                document.getElementById('prod-price').value = product.price;
+                document.getElementById('prod-cost').value = product.cost || '';
+                document.getElementById('prod-price').value = product.price || '';
             } else {
                 document.getElementById('modal-title').innerText = "Novo Produto";
                 document.getElementById('prod-id').value = '';
                 document.getElementById('prod-name').value = '';
                 document.getElementById('prod-qtd').value = '';
+                document.getElementById('prod-cost').value = '';
                 document.getElementById('prod-price').value = '';
             }
         }
