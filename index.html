@@ -45,19 +45,17 @@
         }
         .dash-card {
             flex: 1;
-            min-width: 100px;
+            min-width: 45%; /* Garante que fiquem 2 por linha no celular */
             background: var(--card);
             padding: 15px;
             border-radius: 10px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             text-align: center;
         }
-        .dash-card.danger {
-            border-left: 4px solid var(--danger);
-        }
-        .dash-card.success {
-            border-left: 4px solid var(--success);
-        }
+        .dash-card.danger { border-left: 4px solid var(--danger); }
+        .dash-card.success { border-left: 4px solid var(--success); }
+        .dash-card.info { border-left: 4px solid var(--info); }
+        
         .dash-value {
             font-size: 20px;
             font-weight: bold;
@@ -65,6 +63,7 @@
         }
         .dash-card.danger .dash-value { color: var(--danger); }
         .dash-card.success .dash-value { color: var(--success); }
+        .dash-card.info .dash-value { color: var(--info); }
         
         .dash-label {
             font-size: 13px;
@@ -175,6 +174,7 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
+            z-index: 999;
         }
         .modal-overlay.active {
             display: flex;
@@ -228,9 +228,13 @@
             <div class="dash-value" id="estoque-baixo">0</div>
             <div class="dash-label">Estoque Baixo</div>
         </div>
+        <div class="dash-card info">
+            <div class="dash-value" id="valor-total">R$ 0,00</div>
+            <div class="dash-label">Valor Total (Venda)</div>
+        </div>
         <div class="dash-card success">
             <div class="dash-value" id="lucro-total">R$ 0,00</div>
-            <div class="dash-label">Lucro Total do Estoque</div>
+            <div class="dash-label">Lucro Total Esperado</div>
         </div>
     </div>
 
@@ -300,6 +304,7 @@
             listContainer.innerHTML = ''; 
 
             let lowStockCount = 0;
+            let totalInventoryValue = 0;
             let totalInventoryProfit = 0;
 
             // Calcula os dados do Dashboard baseado em TODOS os produtos
@@ -310,12 +315,15 @@
                 const cost = parseFloat(p.cost) || 0;
                 const price = parseFloat(p.price) || 0;
                 
-                // Soma o lucro total do estoque (lucro por unidade * quantidade)
+                // Soma o valor total de venda do estoque
+                totalInventoryValue += price * quantity;
+                // Soma o lucro total do estoque 
                 totalInventoryProfit += (price - cost) * quantity;
             });
 
             document.getElementById('total-produtos').innerText = products.length;
             document.getElementById('estoque-baixo').innerText = lowStockCount;
+            document.getElementById('valor-total').innerText = 'R$ ' + formatCurrency(totalInventoryValue);
             document.getElementById('lucro-total').innerText = 'R$ ' + formatCurrency(totalInventoryProfit);
 
             // Filtra os produtos para a pesquisa
@@ -343,7 +351,7 @@
                     <div class="product-finance">
                         Custo: R$ ${formatCurrency(cost)} | 
                         Lucro p/ un: <b style="color: ${profitColor}">R$ ${formatCurrency(unitProfit)}</b><br>
-                        Lucro Total (Venda de todas as un.): <b style="color: ${totalProfitColor}">R$ ${formatCurrency(totalItemProfit)}</b>
+                        Lucro Total deste item: <b style="color: ${totalProfitColor}">R$ ${formatCurrency(totalItemProfit)}</b>
                     </div>
 
                     <div class="stock-control">
